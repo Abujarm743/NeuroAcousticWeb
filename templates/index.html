@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Neuro-Acoustic Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-eyebrow">EEG&nbsp;→&nbsp;NARRATIVE</span>
+      <h1 class="brand-title">Neuro-Acoustic Reader</h1>
+    </div>
+    <div class="state-pill" id="statePill">
+      <span class="state-dot" id="stateDot"></span>
+      <span id="stateLabel">idle</span>
+    </div>
+  </header>
+
+  <section class="setup" id="setupPanel">
+    <p class="setup-copy">Load a brainwave recording, then start the session. When your alpha/beta ratio drifts past the threshold, the reader will catch you up.</p>
+    <div class="setup-row">
+      <label class="file-btn">
+        <input type="file" id="fileInput" accept=".csv" hidden>
+        Upload EEG CSV
+      </label>
+      <button class="btn-ghost" id="sampleBtn" type="button">Use sample recording</button>
+      <span class="setup-status" id="setupStatus"></span>
+    </div>
+    <div class="setup-row">
+      <label class="threshold-label" for="thresholdSlider">
+        Daydream threshold <span id="thresholdVal">1.5</span>
+      </label>
+      <input type="range" id="thresholdSlider" min="0.5" max="4" step="0.1" value="1.5">
+      <button class="btn-primary" id="startBtn" type="button" disabled>Start session</button>
+    </div>
+  </section>
+
+  <main class="stage">
+
+    <section class="panel signal-panel">
+      <h2 class="panel-label">Signal</h2>
+      <canvas id="waveCanvas" width="600" height="220"></canvas>
+      <div class="readouts">
+        <div class="readout">
+          <span class="readout-label">alpha</span>
+          <span class="readout-val" id="alphaVal">—</span>
+        </div>
+        <div class="readout">
+          <span class="readout-label">beta</span>
+          <span class="readout-val" id="betaVal">—</span>
+        </div>
+        <div class="readout readout-score">
+          <span class="readout-label">daydream score</span>
+          <span class="readout-val" id="scoreVal">—</span>
+        </div>
+        <div class="readout">
+          <span class="readout-label">elapsed</span>
+          <span class="readout-val" id="elapsedVal">0s</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel story-panel">
+      <h2 class="panel-label">Story <span id="chapterLabel"></span></h2>
+      <div class="story-text" id="storyText">
+        <p class="story-placeholder">Load a recording and press start — the current chapter will read itself aloud here.</p>
+      </div>
+      <div class="recap-banner" id="recapBanner" hidden>
+        <span class="recap-tag">recap</span>
+        <span id="recapText"></span>
+      </div>
+    </section>
+
+  </main>
+
+  <p class="footnote">Audio and narration run entirely in your browser (Web Speech API). Only the EEG scoring and the recap sentence are computed server-side.</p>
+
+</div>
+
+<script src="/static/script.js"></script>
+</body>
+</html>
