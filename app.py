@@ -23,6 +23,24 @@ SAMPLE_CSV_PATH = os.path.join(os.path.dirname(__file__), "sample_data", "EEG_sa
 # Cloud Run instance / demo use; swap for Redis/Firestore for multi-instance.
 _SESSIONS = {}
 
+# Very lightweight per-IP rate limit for the Gemini-calling endpoint, since
+# this is meant to be publicly reachable and every recap costs a real API
+# call. Fine for a single instance / demo traffic; swap for Cloud Armor or a
+# proper rate-limiter (e.g. Redis-backed) before expecting real load.
+_RECAP_CALLS = {}  # ip -> list[timestamp]
+_RECAP_LIMIT = 20
+_RECAP_WINDOW_SECONDS = 60 * 60
+
+
+def _rate_limited(ip: str) -> bool:
+    now = time.time()
+    calls = [t for t in _RECAP_CALLS.get(ip, []) if now - t < _RECAP_WINDOW_SECONDS]
+    _RECAP_CALLS[ip] = calls
+    if len(calls) >= _RECAP_LIMIT:
+        return True
+    calls.append(now)
+    return False
+
 
 # ---------------------------------------------------------------------------
 # EEG column detection (ported from the desktop eeg_monitor.py)
@@ -70,6 +88,26 @@ def _load_rows(csv_bytes: bytes):
 @app.route("/")
 def index():
     return send_from_directory(app.template_folder, "index.html")
+
+
+@app.route("/robots.txt")
+def robots():
+    return Response(
+        "User-agent: *\nAllow: /\nSitemap: " + request.url_root.rstrip("/") + "/sitemap.xml\n",
+        mimetype="text/plain",
+    )
+
+
+@app.route("/sitemap.xml")
+def sitemap():
+    base = request.url_root.rstrip("/")
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"<url><loc>{base}/</loc></url>"
+        "</urlset>"
+    )
+    return Response(xml, mimetype="application/xml")
 
 
 @app.route("/api/upload-eeg", methods=["POST"])
@@ -139,6 +177,10 @@ def eeg_stream():
 @app.route("/api/recap", methods=["POST"])
 def recap():
     """Call Gemini server-side and return a one-sentence recap."""
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
+    if _rate_limited(ip):
+        return jsonify({"error": "Rate limit reached — try again later."}), 429
+
     body = request.get_json(silent=True) or {}
     missed_text = (body.get("missed_text") or "").strip()
     if not missed_text:
@@ -148,7 +190,7 @@ def recap():
         from gemini_recap import generate_recap
         text = generate_recap(missed_text)
         return jsonify({"recap": text})
-except Exception as e:
+    except Exception as e:
         app.logger.error(f"Gemini recap call failed: {e}")
         return jsonify({"recap": None, "error": str(e)}), 502
 
