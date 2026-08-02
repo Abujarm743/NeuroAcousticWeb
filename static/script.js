@@ -157,7 +157,14 @@ function openEegStream() {
 
   eventSource.onerror = () => {
     // Stream ended or connection dropped — stop cleanly.
-    if (eventSource) eventSource.close();
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+    if (waveHistory.length === 0) {
+      elapsedVal.textContent = "error";
+      stateLabel.textContent = "signal connection failed — try restarting";
+    }
   };
 }
 
