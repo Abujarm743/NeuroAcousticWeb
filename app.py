@@ -148,7 +148,8 @@ def recap():
         from gemini_recap import generate_recap
         text = generate_recap(missed_text)
         return jsonify({"recap": text})
-    except Exception as e:
+except Exception as e:
+        app.logger.error(f"Gemini recap call failed: {e}")
         return jsonify({"recap": None, "error": str(e)}), 502
 
 
